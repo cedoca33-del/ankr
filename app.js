@@ -155,7 +155,7 @@ function renderFeed() {
         <div class="filter-chip ${STATE.activeFilter==='room'?'active':''}" onclick="setFilter('room')">Roomie</div>
       </div>
     </div>
-    <div class="feed-list" style="padding-bottom:120px">
+    <div class="feed-list" style="padding-bottom:200px">
       <div class="section-label">En tus ciudades ahora</div>
       ${filtered.map(p => profileCardHTML(p)).join('')}
     </div>
