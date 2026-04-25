@@ -2,7 +2,7 @@
   "name": "ankr",
   "version": "1.0.0",
   "scripts": {
-    "start": "npx serve . --listen $PORT --no-clipboard"
+    "start": "npx serve . -p 8080 --no-clipboard"
   },
   "dependencies": {
     "serve": "^14.2.0"
