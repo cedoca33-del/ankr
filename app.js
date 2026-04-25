@@ -10,6 +10,8 @@ const STATE = {
     { who: 'me', text: '¡Qué bueno! ¿Ya fuiste a la Comuna 13?', time: '10:16' },
     { who: 'them', text: 'Todavía no, iba a ir mañana. ¿Te apuntas?', time: '10:17' },
   ],
+  currentProfile: null,
+  billing: 'monthly',
 };
 
 const PROFILES = [
@@ -30,7 +32,8 @@ const CONNECTIONS = [
 // ─── Navigation ──────────────────────────────────────────────
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(`screen-${name}`).classList.add('active');
+  const el = document.getElementById('screen-' + name);
+  if (el) el.classList.add('active');
   STATE.currentScreen = name;
 }
 
@@ -57,18 +60,14 @@ function renderOnboarding() {
     {
       emoji: '⚓', title: 'Conecta con <span>viajeros reales</span>', sub: 'Amigos de viaje, compañeros de coworking, roomies — en cualquier ciudad del mundo.',
       content: `
-        <div class="step-dots">
-          <div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div>
-        </div>
+        <div class="step-dots"><div class="step-dot active"></div><div class="step-dot"></div><div class="step-dot"></div></div>
         <button class="btn-primary" onclick="nextOnboard()">Comenzar →</button>
       `
     },
     {
       emoji: '🌍', title: 'Aparece en <span>3 ciudades</span> a la vez', sub: 'Tu perfil circula simultáneamente en todas tus ciudades activas.',
       content: `
-        <div class="step-dots">
-          <div class="step-dot"></div><div class="step-dot active"></div><div class="step-dot"></div>
-        </div>
+        <div class="step-dots"><div class="step-dot"></div><div class="step-dot active"></div><div class="step-dot"></div></div>
         <label class="form-label">Tu nombre</label>
         <input class="form-input" id="input-name" placeholder="¿Cómo te llaman?" />
         <label class="form-label">Email</label>
@@ -79,29 +78,26 @@ function renderOnboarding() {
     {
       emoji: '✨', title: '¿Qué <span>buscas?</span>', sub: 'Cuéntales a los demás qué tipo de conexión buscas.',
       content: `
-        <div class="step-dots">
-          <div class="step-dot"></div><div class="step-dot"></div><div class="step-dot active"></div>
-        </div>
+        <div class="step-dots"><div class="step-dot"></div><div class="step-dot"></div><div class="step-dot active"></div></div>
         <label class="form-label">Soy...</label>
-        <div class="chip-grid" id="chips-type">
-          <div class="chip" onclick="toggleChip(this,'type')">Nómada digital</div>
-          <div class="chip" onclick="toggleChip(this,'type')">Mochilero</div>
-          <div class="chip" onclick="toggleChip(this,'type')">Expat</div>
-          <div class="chip" onclick="toggleChip(this,'type')">Business traveler</div>
+        <div class="chip-grid">
+          <div class="chip" onclick="toggleChip(this)">Nómada digital</div>
+          <div class="chip" onclick="toggleChip(this)">Mochilero</div>
+          <div class="chip" onclick="toggleChip(this)">Expat</div>
+          <div class="chip" onclick="toggleChip(this)">Business traveler</div>
         </div>
         <label class="form-label">Busco...</label>
-        <div class="chip-grid" id="chips-looking">
-          <div class="chip" onclick="toggleChip(this,'looking')">Amigos de viaje</div>
-          <div class="chip" onclick="toggleChip(this,'looking')">Coworking</div>
-          <div class="chip" onclick="toggleChip(this,'looking')">Roomie</div>
-          <div class="chip" onclick="toggleChip(this,'looking')">Lo que surja</div>
+        <div class="chip-grid">
+          <div class="chip" onclick="toggleChip(this)">Amigos de viaje</div>
+          <div class="chip" onclick="toggleChip(this)">Coworking</div>
+          <div class="chip" onclick="toggleChip(this)">Roomie</div>
+          <div class="chip" onclick="toggleChip(this)">Lo que surja</div>
         </div>
         <button class="btn-primary" onclick="finishOnboard()">Entrar a Ankr →</button>
         <button class="btn-ghost" onclick="finishOnboard()">Saltar por ahora</button>
       `
     }
   ];
-
   const step = steps[STATE.onboardStep - 1];
   document.getElementById('screen-onboarding').innerHTML = `
     <div class="onboard-hero">
@@ -110,44 +106,30 @@ function renderOnboarding() {
       <h1 class="onboard-title">${step.title}</h1>
       <p class="onboard-sub">${step.sub}</p>
     </div>
-    <div class="onboard-card">
-      ${step.content}
-    </div>
+    <div class="onboard-card">${step.content}</div>
   `;
 }
 
 function nextOnboard() {
-  if (STATE.onboardStep < 3) {
-    STATE.onboardStep++;
-    renderOnboarding();
-  }
+  if (STATE.onboardStep < 3) { STATE.onboardStep++; renderOnboarding(); }
 }
-
 function finishOnboard() {
   const nameEl = document.getElementById('input-name');
   if (nameEl) STATE.user.name = nameEl.value || 'Viajero';
-  renderFeed();
-  showScreen('feed');
+  renderFeed(); showScreen('feed');
 }
-
 function toggleChip(el) { el.classList.toggle('selected'); }
 
 // ─── Feed ─────────────────────────────────────────────────────
 function renderFeed() {
-  const filtered = STATE.activeFilter === 'todos'
-    ? PROFILES
-    : PROFILES.filter(p => p.type === STATE.activeFilter);
-
+  const filtered = STATE.activeFilter === 'todos' ? PROFILES : PROFILES.filter(p => p.type === STATE.activeFilter);
   document.getElementById('screen-feed').innerHTML = `
     <div class="feed-header">
       <div class="feed-brand">
         <div class="feed-brand-name">Ankr</div>
         <div class="badge">2 ciudades</div>
       </div>
-      <div class="feed-location">
-        <div class="location-dot"></div>
-        Medellín · CDMX
-      </div>
+      <div class="feed-location"><div class="location-dot"></div>Medellín · CDMX</div>
       <div class="filter-bar">
         <div class="filter-chip ${STATE.activeFilter==='todos'?'active':''}" onclick="setFilter('todos')">Todos</div>
         <div class="filter-chip ${STATE.activeFilter==='travel'?'active':''}" onclick="setFilter('travel')">Amigos de viaje</div>
@@ -155,7 +137,7 @@ function renderFeed() {
         <div class="filter-chip ${STATE.activeFilter==='room'?'active':''}" onclick="setFilter('room')">Roomie</div>
       </div>
     </div>
-    <div class="feed-list" style="padding-bottom:300px">
+    <div class="feed-list" style="padding-bottom:20px">
       <div class="section-label">En tus ciudades ahora</div>
       ${filtered.map(p => profileCardHTML(p)).join('')}
     </div>
@@ -172,15 +154,10 @@ function profileCardHTML(p) {
     <div class="profile-card" onclick="openProfile(${p.id})">
       <div class="card-head">
         <div class="avatar ${p.online?'avatar-online':''}" style="background:${p.bg}">${p.initials}</div>
-        <div class="card-info">
-          <div class="card-name">${p.name}</div>
-          <div class="card-meta">${p.meta}</div>
-        </div>
+        <div class="card-info"><div class="card-name">${p.name}</div><div class="card-meta">${p.meta}</div></div>
       </div>
       <div class="card-bio">${p.bio}</div>
-      <div class="card-cities">
-        ${p.cities.map(c => `<div class="city-pill ${c===p.hereCity?'here':''}">📍 ${c}</div>`).join('')}
-      </div>
+      <div class="card-cities">${p.cities.map(c=>`<div class="city-pill ${c===p.hereCity?'here':''}">📍 ${c}</div>`).join('')}</div>
       <div class="card-tags">${p.tags.map(t=>`<div class="tag">${t}</div>`).join('')}</div>
       <div class="card-foot">
         <div class="conn-type ${typeClass}">${typeLabel}</div>
@@ -189,36 +166,29 @@ function profileCardHTML(p) {
     </div>
   `;
 }
-
-function connect(btn) {
-  btn.classList.add('sent');
-  btn.textContent = 'Enviado ✓';
-}
+function connect(btn) { btn.classList.add('sent'); btn.textContent = 'Enviado ✓'; }
 
 // ─── Profile Detail ───────────────────────────────────────────
 function openProfile(id) {
   const p = PROFILES.find(x => x.id === id);
   if (!p) return;
+  STATE.currentProfile = p;
   document.getElementById('screen-profile').innerHTML = `
     <div class="profile-hero">
-      <div class="profile-back" onclick="showScreen('feed')">←</div>
+      <div class="profile-back" onclick="showScreen('feed');renderFeed()">←</div>
       <div class="profile-avatar-lg" style="background:${p.bg}">${p.initials}</div>
       <div class="profile-name-lg">${p.name}</div>
       <div class="profile-sub">${p.meta}</div>
       <div class="verified">✓ Perfil verificado</div>
       ${p.online ? `<div class="online-status"><div class="online-dot-sm"></div><div class="online-txt">Activa ahora en ${p.hereCity}</div></div>` : ''}
     </div>
-    <div class="profile-body" style="padding-bottom:100px">
+    <div class="profile-body">
       <div class="profile-section-title">Sobre mí</div>
       <p class="profile-bio">${p.bio}</p>
       <div class="profile-section-title">Ciudades activas</div>
-      <div class="card-cities" style="margin-bottom:20px">
-        ${p.cities.map(c=>`<div class="city-pill ${c===p.hereCity?'here':''}">📍 ${c}</div>`).join('')}
-      </div>
+      <div class="card-cities" style="margin-bottom:20px">${p.cities.map(c=>`<div class="city-pill ${c===p.hereCity?'here':''}">📍 ${c}</div>`).join('')}</div>
       <div class="profile-section-title">Intereses</div>
-      <div class="card-tags" style="margin-bottom:20px">
-        ${p.tags.map(t=>`<div class="tag">${t}</div>`).join('')}
-      </div>
+      <div class="card-tags" style="margin-bottom:20px">${p.tags.map(t=>`<div class="tag">${t}</div>`).join('')}</div>
       <div class="profile-section-title">Estadísticas</div>
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-val">14</div><div class="stat-lbl">Países visitados</div></div>
@@ -226,20 +196,18 @@ function openProfile(id) {
         <div class="stat-card"><div class="stat-val">Nómada</div><div class="stat-lbl">Estilo de viaje</div></div>
         <div class="stat-card"><div class="stat-val">${{travel:'Amigos',work:'Coworking',room:'Roomie'}[p.type]}</div><div class="stat-lbl">Busca</div></div>
       </div>
-      <button class="btn-primary" onclick="openChat()">Enviar mensaje</button>
-      <button class="btn-ghost" style="margin-top:10px">Guardar perfil</button>
+      <button class="btn-primary" style="margin-top:20px" onclick="openChat()">Enviar mensaje</button>
+      <button class="btn-ghost" style="margin-top:10px;margin-bottom:40px">Guardar perfil</button>
     </div>
   `;
   showScreen('profile');
 }
 
 // ─── Chat ─────────────────────────────────────────────────────
-function openChat() {
-  renderChat();
-  showScreen('chat');
-}
+function openChat() { renderChat(); showScreen('chat'); }
 
 function renderChat() {
+  const p = STATE.currentProfile || PROFILES[0];
   const msgs = STATE.chatMessages.map(m => `
     <div class="msg-row ${m.who}">
       <div>
@@ -248,14 +216,13 @@ function renderChat() {
       </div>
     </div>
   `).join('');
-
   document.getElementById('screen-chat').innerHTML = `
     <div class="chat-topbar">
       <div class="topbar-back" onclick="showScreen('profile')">←</div>
-      <div class="chat-avatar-sm" style="background:#3730a3">SR</div>
+      <div class="chat-avatar-sm" style="background:${p.bg}">${p.initials}</div>
       <div class="chat-info">
-        <div class="chat-name">Sofia R.</div>
-        <div class="chat-status">Activa ahora · Medellín</div>
+        <div class="chat-name">${p.name}</div>
+        <div class="chat-status">Activa ahora · ${p.hereCity}</div>
       </div>
     </div>
     <div class="chat-body" id="chat-body">${msgs}</div>
@@ -273,33 +240,28 @@ function renderChat() {
 }
 
 function sendSugg(chip) {
-  addMsg(chip.textContent, 'me');
-  chip.remove();
-  setTimeout(() => addMsg('¡Perfecto! Te mando la ubicación del punto de encuentro 📍', 'them'), 900);
+  addMsg(chip.textContent, 'me'); chip.remove();
+  setTimeout(() => addMsg('¡Perfecto! Te mando la ubicación 📍', 'them'), 900);
 }
-
 function sendMsg() {
   const inp = document.getElementById('chat-input');
   const txt = inp?.value.trim();
   if (!txt) return;
-  addMsg(txt, 'me');
-  inp.value = '';
+  addMsg(txt, 'me'); inp.value = '';
   setTimeout(() => addMsg('Genial, nos vemos allá 🙌', 'them'), 800);
 }
-
 function addMsg(text, who) {
   const now = new Date();
-  const t = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const t = now.getHours() + ':' + String(now.getMinutes()).padStart(2,'0');
   STATE.chatMessages.push({ who, text, time: t });
   const body = document.getElementById('chat-body');
   if (!body) return;
   const div = document.createElement('div');
-  div.className = `msg-row ${who}`;
-  div.innerHTML = `<div><div class="bubble ${who}">${text}</div><div class="msg-time" style="${who==='me'?'text-align:right':''}">${t}</div></div>`;
+  div.className = 'msg-row ' + who;
+  div.innerHTML = '<div><div class="bubble ' + who + '">' + text + '</div><div class="msg-time" style="' + (who==='me'?'text-align:right':'') + '">' + t + '</div></div>';
   body.appendChild(div);
   scrollChat();
 }
-
 function scrollChat() {
   const body = document.getElementById('chat-body');
   if (body) body.scrollTop = body.scrollHeight;
@@ -332,7 +294,7 @@ function renderNotifications() {
           <div class="notif-text"><strong>Axel M.</strong> te envió un mensaje</div>
           <div class="notif-time">hace 18 min · Medellín</div>
           <div class="notif-actions">
-            <button class="btn-sm primary" onclick="openChat()">Responder</button>
+            <button class="btn-sm primary" onclick="STATE.currentProfile=PROFILES[1];openChat()">Responder</button>
           </div>
         </div>
         <div class="unread-dot"></div>
@@ -343,7 +305,7 @@ function renderNotifications() {
           <div class="notif-text"><strong>12 viajeros nuevos</strong> llegaron a Medellín esta semana</div>
           <div class="notif-time">hace 1 hora</div>
           <div class="notif-actions">
-            <button class="btn-sm primary" onclick="showScreen('feed')">Ver perfiles</button>
+            <button class="btn-sm primary" onclick="navTo('feed')">Ver perfiles</button>
           </div>
         </div>
         <div class="unread-dot"></div>
@@ -374,7 +336,6 @@ function renderNotifications() {
     ${bottomNavHTML('notifications')}
   `;
 }
-
 function acceptNotif(btn) {
   const row = btn.closest('.notif-row');
   row.classList.remove('unread');
@@ -382,10 +343,7 @@ function acceptNotif(btn) {
   const dot = row.querySelector('.unread-dot');
   if (dot) dot.remove();
 }
-
-function dismissNotif(btn) {
-  btn.closest('.notif-row').style.opacity = '0.4';
-}
+function dismissNotif(btn) { btn.closest('.notif-row').style.opacity = '0.4'; }
 
 // ─── Connections ──────────────────────────────────────────────
 function renderConnections() {
@@ -395,49 +353,33 @@ function renderConnections() {
       <div class="badge">5</div>
     </div>
     <div class="tabs">
-      <div class="tab ${STATE.activeTab==='all'?'active':''}" onclick="setTab('all')">Todas</div>
-      <div class="tab ${STATE.activeTab==='online'?'active':''}" onclick="setTab('online')">En línea</div>
-      <div class="tab ${STATE.activeTab==='pending'?'active':''}" onclick="setTab('pending')">Pendientes</div>
+      <div class="tab ${STATE.activeTab==='all'?'active':''}" onclick="setTab('all',this)">Todas</div>
+      <div class="tab ${STATE.activeTab==='online'?'active':''}" onclick="setTab('online',this)">En línea</div>
+      <div class="tab ${STATE.activeTab==='pending'?'active':''}" onclick="setTab('pending',this)">Pendientes</div>
     </div>
-    <div class="conn-list" id="conn-list">
-      ${renderConnList()}
-    </div>
+    <div class="conn-list" id="conn-list">${renderConnList()}</div>
     ${bottomNavHTML('connections')}
   `;
 }
-
-function setTab(tab) {
+function setTab(tab, el) {
   STATE.activeTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-  document.getElementById('conn-list').innerHTML = renderConnList();
+  if (el) el.classList.add('active');
+  const list = document.getElementById('conn-list');
+  if (list) list.innerHTML = renderConnList();
 }
-
 function renderConnList() {
-  const list = STATE.activeTab === 'online'
-    ? CONNECTIONS.filter(c => c.online)
-    : STATE.activeTab === 'pending'
-    ? []
-    : CONNECTIONS;
-
-  if (STATE.activeTab === 'pending') {
-    return `<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:14px">Sin solicitudes pendientes</div>`;
-  }
-
-  return `
-    <div class="section-label">${STATE.activeTab==='online'?'En línea ahora':'Todas tus conexiones'}</div>
-    ${list.map(c => `
+  if (STATE.activeTab === 'pending') return '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:14px">Sin solicitudes pendientes</div>';
+  const list = STATE.activeTab === 'online' ? CONNECTIONS.filter(c => c.online) : CONNECTIONS;
+  return '<div class="section-label">' + (STATE.activeTab==='online'?'En línea ahora':'Todas tus conexiones') + '</div>' +
+    list.map(c => `
       <div class="conn-card">
         <div class="avatar ${c.online?'avatar-online':''}" style="background:${c.bg};width:44px;height:44px;font-size:14px">${c.initials}</div>
-        <div class="conn-info">
-          <div class="conn-name">${c.name}</div>
-          <div class="conn-meta">${c.meta}</div>
-        </div>
+        <div class="conn-info"><div class="conn-name">${c.name}</div><div class="conn-meta">${c.meta}</div></div>
         <div class="conn-city-badge">${c.city}</div>
-        <div class="msg-icon" onclick="openChat()">💬</div>
+        <div class="msg-icon" onclick="STATE.currentProfile=PROFILES.find(p=>p.initials==='${c.initials}')||PROFILES[0];openChat()">💬</div>
       </div>
-    `).join('')}
-  `;
+    `).join('');
 }
 
 // ─── Cities ───────────────────────────────────────────────────
@@ -459,7 +401,7 @@ function renderCities() {
         <div class="city-info"><div class="city-name">Medellín</div><div class="city-count">412 viajeros activos</div></div>
         <div class="city-active-badge">Activa</div>
       </div>
-      <div class="city-card city-add">
+      <div class="city-card city-add" onclick="navTo('pricing')">
         <div class="city-flag">＋</div>
         <div class="city-info"><div class="city-name">Agregar tercera ciudad</div><div class="city-count">1 slot disponible</div></div>
       </div>
@@ -476,7 +418,7 @@ function renderCities() {
       <div class="upgrade-banner">
         <div style="font-size:24px">⚓</div>
         <div class="upgrade-text">Con Ankr Pro apareces en hasta 5 ciudades y destacas en el feed.</div>
-        <button class="upgrade-btn">Ver planes</button>
+        <button class="upgrade-btn" onclick="navTo('pricing')">Ver planes</button>
       </div>
       <button class="btn-primary" style="margin-top:16px">Guardar cambios</button>
     </div>
@@ -484,19 +426,88 @@ function renderCities() {
   `;
 }
 
+// ─── Pricing ──────────────────────────────────────────────────
+function renderPricing() {
+  const isAnnual = STATE.billing === 'annual';
+  const proPrize = isAnnual ? '$5' : '$9';
+  const nomadPrice = isAnnual ? '$11' : '$19';
+  const period = isAnnual ? 'por mes · cobrado anual' : 'por mes';
+
+  document.getElementById('screen-pricing').innerHTML = `
+    <div class="topbar">
+      <div class="topbar-back" onclick="navTo('cities')">←</div>
+      <div class="topbar-title">Ankr Pro</div>
+    </div>
+    <div style="padding:16px 16px 100px">
+      <div class="plan-toggle">
+        <div class="toggle-opt ${!isAnnual?'active':''}" onclick="STATE.billing='monthly';renderPricing()">Mensual</div>
+        <div class="toggle-opt ${isAnnual?'active':''}" onclick="STATE.billing='annual';renderPricing()">Anual <span class="save-badge">-40%</span></div>
+      </div>
+
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price">$0</div>
+        <div class="plan-period">para siempre</div>
+        <div class="plan-features">
+          <div class="feature-row"><div class="check">✓</div>1 ciudad activa</div>
+          <div class="feature-row"><div class="check">✓</div>Chat ilimitado</div>
+          <div class="feature-row"><div class="check">✓</div>Perfil básico</div>
+        </div>
+        <button class="plan-btn">Plan actual</button>
+      </div>
+
+      <div class="plan-card featured">
+        <div class="popular-badge">⭐ Más popular</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">${proPrize}</div>
+        <div class="plan-period">${period}</div>
+        <div class="plan-features">
+          <div class="feature-row"><div class="check" style="color:#6c63ff">✓</div>3 ciudades activas</div>
+          <div class="feature-row"><div class="check" style="color:#6c63ff">✓</div>Chips de IA en el chat</div>
+          <div class="feature-row"><div class="check" style="color:#6c63ff">✓</div>Perfil destacado en feed</div>
+          <div class="feature-row"><div class="check" style="color:#6c63ff">✓</div>Badge verificado</div>
+        </div>
+        <button class="plan-btn primary">Empezar Pro</button>
+      </div>
+
+      <div class="plan-card">
+        <div class="plan-name">Nomad</div>
+        <div class="plan-price">${nomadPrice}</div>
+        <div class="plan-period">${period}</div>
+        <div class="plan-features">
+          <div class="feature-row"><div class="check">✓</div>5 ciudades activas</div>
+          <div class="feature-row"><div class="check">✓</div>Todo lo de Pro</div>
+          <div class="feature-row"><div class="check">✓</div>Acceso a eventos Ankr</div>
+          <div class="feature-row"><div class="check">✓</div>Soporte prioritario</div>
+        </div>
+        <button class="plan-btn">Empezar Nomad</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <div style="display:flex">
+          <div style="width:28px;height:28px;border-radius:50%;background:#3730a3;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid var(--bg)">SR</div>
+          <div style="width:28px;height:28px;border-radius:50%;background:#0f6e56;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid var(--bg);margin-left:-6px">AM</div>
+          <div style="width:28px;height:28px;border-radius:50%;background:#6b21a8;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;border:2px solid var(--bg);margin-left:-6px">KL</div>
+        </div>
+        <div style="font-size:12px;color:var(--text3)">+2,400 nómadas ya usan Pro</div>
+      </div>
+    </div>
+  `;
+}
+
 // ─── Bottom Nav ───────────────────────────────────────────────
 function bottomNavHTML(active) {
   const items = [
-    { id: 'feed', icon: '🗂', label: 'Feed', action: "navTo('feed')" },
-    { id: 'notifications', icon: '🔔', label: 'Notifs', action: "navTo('notifications')", dot: true },
-    { id: 'connections', icon: '👥', label: 'Conexiones', action: "navTo('connections')" },
-    { id: 'cities', icon: '🌍', label: 'Ciudades', action: "navTo('cities')" },
+    { id: 'feed', icon: '🗂', label: 'Feed' },
+    { id: 'notifications', icon: '🔔', label: 'Notifs', dot: true },
+    { id: 'connections', icon: '👥', label: 'Conexiones' },
+    { id: 'cities', icon: '🌍', label: 'Ciudades' },
   ];
   return `
     <div class="bottom-nav">
       ${items.map(i => `
-        <div class="nav-item ${i.id===active?'active':''}" onclick="${i.action}">
-          ${i.dot ? `<div class="nav-dot"></div>` : ''}
+        <div class="nav-item ${i.id===active?'active':''}" onclick="navTo('${i.id}')">
+          ${i.dot ? '<div class="nav-dot"></div>' : ''}
           <div class="nav-icon">${i.icon}</div>
           <div>${i.label}</div>
         </div>
@@ -510,6 +521,7 @@ function navTo(screen) {
   else if (screen === 'notifications') { renderNotifications(); showScreen('notifications'); }
   else if (screen === 'connections') { renderConnections(); showScreen('connections'); }
   else if (screen === 'cities') { renderCities(); showScreen('cities'); }
+  else if (screen === 'pricing') { renderPricing(); showScreen('pricing'); }
 }
 
 // ─── Init ─────────────────────────────────────────────────────
